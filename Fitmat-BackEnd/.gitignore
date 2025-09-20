@@ -1,0 +1,23 @@
+# Node
+node_modules/
+npm-debug.log
+.DS_Store
+
+# TypeScript build artifacts
+dist/
+*.tsbuildinfo
+
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.sqlite
+prisma/*.sqlite-journal
+
+# Logs
+logs/
+*.log
+
+# Uploads / temp
+uploads/
+tmp/
