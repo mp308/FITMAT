@@ -1,4 +1,4 @@
-﻿# Fitmat BackEnd
+# Fitmat BackEnd
 
 ## ภาพรวม
 Fitmat BackEnd คือ REST API ที่สร้างด้วย Express + TypeScript ใช้ Prisma/MySQL สำหรับจัดเก็บข้อมูล พร้อมฟีเจอร์การยืนยันตัวตน การจัดการเทรนเนอร์/คลาส ระบบติดต่อเรา ระบบระดับสมาชิก (Bronze/Gold/Platinum) และการอัปโหลดสลิปชำระเงินเพื่อตรวจสอบโดยแอดมิน นอกจากนี้ยังใช้ Nodemailer สำหรับแจ้งเตือนอีเมลจากแบบฟอร์มติดต่อเรา
@@ -46,13 +46,16 @@ px prisma generate – สร้าง Prisma Client ใหม่
 px prisma db push – ส่งโครงสร้าง Prisma ไปยังฐานข้อมูลปัจจุบัน
 
 ## คู่มือ API
-ถ้าไม่ได้ระบุ จะใช้ Payload แบบ JSON ทั้งหมด Endpoints ที่มีเครื่องหมาย **(admin)** ต้องส่ง dminId ที่เป็นผู้ใช้ role ADMIN มาด้วย
+ถ้าไม่ได้ระบุ จะใช้ Payload แบบ JSON ทั้งหมด Endpoints ที่มีเครื่องหมาย **(admin)** ต้องส่ง AdminId ที่เป็นผู้ใช้ role ADMIN มาด้วย
 
 ### การยืนยันตัวตน
 | Method | Endpoint | อธิบาย |
 | --- | --- | --- |
 | POST | /api/register | สมัครสมาชิกใหม่ (role เริ่มต้นคือ USER) |
 | POST | /api/login | ล็อกอิน รับ JWT + ข้อมูลผู้ใช้ |
+| POST | /api/request-password-reset | ขอ opt ในการ resetpassword ( ส่ง mail พร้อมทำการ gen token resetpassword )|
+| POST | /api/reset-password | ทำการ resetpassword ( token resetpassword และ รหัสใหม่ไปเทียบ) |
+
 
 **ตัวอย่างสมัครสมาชิก**
 `http
@@ -72,10 +75,26 @@ POST /api/login
 }
 `
 
+**ตัวอย่างการเปลี่ยนรหัสผ่าน**
+`http
+POST /api/request-password-reset
+{
+  "email": "alice@example.com",
+}
+`
+`http
+POST /api/reset-password
+{
+  "resetToken": "abcdef123456", 
+  "newPassword": "pass1234"
+}
+`
+
 ### ผู้ใช้และบทบาท (เฉพาะแอดมิน)
 | Method | Endpoint | รายละเอียด |
 | --- | --- | --- |
-| GET | /api/users?adminId=1 | ดูรายชื่อผู้ใช้ทั้งหมด หรือใส่ ole=USER_GOLD เพื่อกรอง |
+| GET | /api/users?adminId=1 | ดูรายชื่อผู้ใช้ทั้งหมด หรือใส่ 
+ole=USER_GOLD เพื่อกรอง |
 | GET | /api/users/roles | ดูรายการ role ทั้งหมดในระบบ |
 | PATCH | /api/users/:userId/role | ปรับ role ผู้ใช้ ต้องส่ง { adminId, role } |
 
@@ -104,7 +123,8 @@ PATCH /api/users/12/role
 | Method | Endpoint | รายละเอียด |
 | --- | --- | --- |
 | GET | /api/classes | รายการคลาสทั้งหมด (เทรนเนอร์, หมวด, requiredRole, จำนวนที่นั่ง) |
-| POST | /api/classes | **(admin)** สร้างคลาสใหม่ ต้องมี dminId, 	rainerId, 	itle, startTime, endTime และเลือกใส่ categoryId, equiredRole (USER, USER_BRONZE, USER_GOLD, USER_PLATINUM), capacity |
+| POST | /api/classes | **(admin)** สร้างคลาสใหม่ ต้องมี AdminId, 	rainerId, 	itle, startTime, endTime และเลือกใส่ categoryId, 
+equiredRole (USER, USER_BRONZE, USER_GOLD, USER_PLATINUM), capacity |
 | POST | /api/classes/:classId/enroll | ลงทะเบียนเข้าคลาส ส่ง { userId } และจะตรวจสอบ role ของผู้ใช้ |
 | GET | /api/classes/:classId/enrollments | ดูผู้ที่ลงทะเบียนในคลาส พร้อมข้อมูลคลาส |
 
@@ -134,7 +154,7 @@ ote ได้ (ไม่บังคับ) |
 | GET | /api/payments/:paymentId/image?adminId=1 | **(admin)** ดาวน์โหลดรูปจริง |
 
 **ตัวอย่างอัปโหลด (cURL)**
-`ash
+`
 curl -X POST http://localhost:4000/api/payments \
   -F "paymentImage=@/path/slip.jpg" \
   -F "userId=12" \
@@ -143,7 +163,9 @@ curl -X POST http://localhost:4000/api/payments \
 `
 
 ### หมายเหตุเรื่อง membership
-ถ้าคลาสกำหนด equiredRole ผู้ใช้ที่ role ไม่ตรง (และไม่ใช่ ADMIN หรือ TRAINER) จะลงทะเบียนไม่ได้ เช่น คลาส equiredRole=USER_GOLD ผู้ใช้ที่เป็น USER_BRONZE จะถูกปฏิเสธ
+ถ้าคลาสกำหนด 
+equiredRole ผู้ใช้ที่ role ไม่ตรง (และไม่ใช่ ADMIN หรือ TRAINER) จะลงทะเบียนไม่ได้ เช่น คลาส 
+equiredRole=USER_GOLD ผู้ใช้ที่เป็น USER_BRONZE จะถูกปฏิเสธ
 
 ### สรุปงานที่ต้องใช้สิทธิ์แอดมิน
 | งาน | ต้องเป็นแอดมิน |
@@ -156,7 +178,7 @@ curl -X POST http://localhost:4000/api/payments \
 ### Prisma & ฐานข้อมูล
 - แก้ไข schema ที่ prisma/schema.prisma
 - หลังแก้ schema ให้รัน:
-  `ash
+  `
   npx prisma generate
   npx prisma db push
   `
@@ -169,7 +191,7 @@ px prisma db push --force-reset
 px prisma studio เพื่อเพิ่ม/แก้ไขข้อมูลในฐานได้ง่าย
 
 ### แนวทางพัฒนาต่อ
-- ใช้ JWT middleware เพื่ออ่าน dminId / userId จาก token โดยตรง ไม่ต้องส่งมาใน body/query
+- ใช้ JWT middleware เพื่ออ่าน AdminId / userId จาก token โดยตรง ไม่ต้องส่งมาใน body/query
 - ย้ายการเก็บไฟล์จาก Base64 ไปยัง object storage (เช่น S3) เพื่อลดขนาดฐานข้อมูล
 - เพิ่มระบบ logging/monitoring เช่น pino หรือ winston
 - เขียน automated tests (Jest/Supertest)
