@@ -21,3 +21,8 @@ logs/
 # Uploads / temp
 uploads/
 tmp/
+
+# env files
+.env
+.env.local
+.env.*.local
