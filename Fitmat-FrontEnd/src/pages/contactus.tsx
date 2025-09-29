@@ -1,79 +1,65 @@
 import React, { useState } from "react";
+import Header from "../../components/Layout/Header";
 
 export default function Contact() {
   const [open, setOpen] = useState(false);
 
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phoneNumber: "",
+    subject: "",
+    message: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  // handle change
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch("http://localhost:4000/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to send message");
+      }
+
+      setStatus("success");
+      setForm({
+        name: "",
+        email: "",
+        phoneNumber: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error: any) {
+      setStatus(error.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="w-full text-gray-800">
       {/* ===== Header ===== */}
-      <header className="absolute top-0 inset-x-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 sm:h-20 flex items-center justify-between">
-            {/* โลโก้ */}
-            <a href="/" className="flex items-center gap-2">
-              <span className="text-white text-2xl sm:text-3xl font-extrabold tracking-wide">
-                <span className="text-red-500">FIT</span>MATE
-              </span>
-            </a>
-
-            {/* เมนู desktop */}
-            <nav className="hidden md:flex items-center gap-8">
-              {[
-                { name: "home", href: "/" },
-                { name: "trainers", href: "/trainer" },
-                { name: "reviews", href: "/review" },
-                { name: "contact us", href: "/contactus" },
-              ].map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-white text-lg font-semibold hover:text-red-400 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                >
-                  {item.name}
-                </a>
-              ))}
-            </nav>
-
-            {/* Hamburger icon mobile */}
-            <button
-              className="md:hidden flex items-center text-white"
-              onClick={() => setOpen(!open)}
-              aria-label="Open menu"
-            >
-              <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Mobile menu */}
-        {open && (
-          <div className="md:hidden bg-red-600 px-6 py-4">
-            <nav className="flex flex-col gap-4">
-              {[
-                { name: "home", href: "/" },
-                { name: "trainers", href: "/trainer" },
-                { name: "reviews", href: "/review" },
-                { name: "contact us", href: "/contactus" },
-              ].map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-white text-lg font-semibold"
-                  onClick={() => setOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
-            </nav>
-          </div>
-        )}
-      </header>
+      <Header />
 
       {/* ===== Hero Section ===== */}
       <section className="relative overflow-hidden">
@@ -99,12 +85,15 @@ export default function Contact() {
             {/* ข้อมูลการติดต่อ */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                อยากเริ่มต้นแปลี่ยนสุขภาพ?<br />
+                อยากเริ่มต้นแปลี่ยนสุขภาพ?
+                <br />
                 ติดต่อเราได้เลยวันนี้!
               </h2>
               <p className="text-gray-600 mb-8">
-                ทีมงานของเราพร้อมให้คำปรึกษา ออกแบบโปรแกรมออกกำลังกาย<br />
-                และโภชนาการเพื่อให้คุณบรรลุเป้าหมายอย่างมีประสิทธิภาพ<br />
+                ทีมงานของเราพร้อมให้คำปรึกษา ออกแบบโปรแกรมออกกำลังกาย
+                <br />
+                และโภชนาการเพื่อให้คุณบรรลุเป้าหมายอย่างมีประสิทธิภาพ
+                <br />
                 ไม่ว่าจะเป็นการลดน้ำหนัก เพิ่มกล้ามเนื้อ หรือเสริมสร้างสุขภาพ
               </p>
 
@@ -123,9 +112,13 @@ export default function Contact() {
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="font-bold text-gray-900 mb-2">มหาวิทยาลัยเกษตรศาสตร์วิทยาเขตกำแพงแสน</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">
+                    มหาวิทยาลัยเกษตรศาสตร์วิทยาเขตกำแพงแสน
+                  </h3>
                   <p className="text-gray-600 text-sm">
-                    อาคารเทคโนโลยีสารสนเทศ ภายในมหาวิทยาลัยเกษตรศาสตร์วิทยาเขตกำแพงแสน<br />
+                    อาคารเทคโนโลยีสารสนเทศ
+                    ภายในมหาวิทยาลัยเกษตรศาสตร์วิทยาเขตกำแพงแสน
+                    <br />
                   </p>
                 </div>
               </div>
@@ -136,79 +129,109 @@ export default function Contact() {
             </div>
 
             {/* ฟอร์มติดต่อ */}
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
-                เราช่วยคุณได้อย่างไร?
-              </h3>
-              <p className="text-gray-600 text-center mb-8">
-                กรุณากรอกข้อมูลการติดต่อ เราจะติดต่อกลับภายใน 24 ชั่วโมง
-              </p>
+<div className="bg-white rounded-lg shadow-lg p-8">
+      <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
+        เราช่วยคุณได้อย่างไร?
+      </h3>
+      <p className="text-gray-600 text-center mb-8">
+        กรุณากรอกข้อมูลการติดต่อ เราจะติดต่อกลับภายใน 24 ชั่วโมง
+      </p>
 
-              <form className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ชื่อของคุณ
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Please enter your full name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      อีเมล
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="Enter your email address"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-                    />
-                  </div>
-                </div>
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ชื่อของคุณ
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Please enter your full name"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              อีเมล
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter your email address"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+            />
+          </div>
+        </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เบอร์โทรศัพท์
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-                  />
-                </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            เบอร์โทรศัพท์
+          </label>
+          <input
+            type="tel"
+            name="phoneNumber"
+            value={form.phoneNumber}
+            onChange={handleChange}
+            placeholder="Enter your phone number"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+          />
+        </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    หัวข้อที่อยากปรึกษา
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Add subject here"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-                  />
-                </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            หัวข้อที่อยากปรึกษา
+          </label>
+          <input
+            type="text"
+            name="subject"
+            value={form.subject}
+            onChange={handleChange}
+            placeholder="Add subject here"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+          />
+        </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ข้อความของคุณ
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Describe your message here"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
-                  ></textarea>
-                </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ข้อความของคุณ
+          </label>
+          <textarea
+            name="message"
+            value={form.message}
+            onChange={handleChange}
+            rows={4}
+            placeholder="Describe your message here"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
+          ></textarea>
+        </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 active:bg-red-700 active:scale-95 transition-all duration-200 cursor-pointer"
-                >
-                  Send Message
-                </button>
-              </form>
-            </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 active:bg-red-700 active:scale-95 transition-all duration-200 cursor-pointer"
+        >
+          {loading ? "กำลังส่ง..." : "Send Message"}
+        </button>
+      </form>
+
+      {status === "success" && (
+        <p className="mt-4 text-green-600 text-sm text-center">
+          ✅ ส่งข้อความเรียบร้อยแล้ว!
+        </p>
+      )}
+      {status && status !== "success" && (
+        <p className="mt-4 text-red-600 text-sm text-center">❌ {status}</p>
+      )}
+    </div>
           </div>
         </div>
       </section>
@@ -219,34 +242,48 @@ export default function Contact() {
           <div>
             <h4 className="text-2xl font-extrabold mb-4">FITMATE</h4>
             <p className="text-red-100 text-sm leading-6">
-              เปลี่ยนพลังงานให้เป็นรูปร่างในแบบของคุณ ออกแบบโปรแกรมเวิร์คเอาต์ให้เหมาะกับแต่ละคน
+              เปลี่ยนพลังงานให้เป็นรูปร่างในแบบของคุณ
+              ออกแบบโปรแกรมเวิร์คเอาต์ให้เหมาะกับแต่ละคน
             </p>
           </div>
           <div>
             <h5 className="font-bold mb-4">สำนักงานใหญ่</h5>
             <p className="text-red-100 text-sm leading-6">
-              มหาวิทยาลัยเกษตรศาสตร์<br />
-              วิทยาเขตกำแพงแสน<br />
-              1 หมู่ 6 ถนนมาลัยแมน<br />
-              ตำบลกำแพงแสน อำเภอกำแพงแสน<br />
-              จังหวัดนครปฐม 73140<br />
-              ประเทศไทย 
+              มหาวิทยาลัยเกษตรศาสตร์
+              <br />
+              วิทยาเขตกำแพงแสน
+              <br />
+              1 หมู่ 6 ถนนมาลัยแมน
+              <br />
+              ตำบลกำแพงแสน อำเภอกำแพงแสน
+              <br />
+              จังหวัดนครปฐม 73140
+              <br />
+              ประเทศไทย
             </p>
           </div>
           <div>
             <h5 className="font-bold mb-4">หน้าเรา</h5>
             <ul className="space-y-2 text-red-100 text-sm">
               <li>
-                <a href="/contactus" className="hover:text-white">เกี่ยวกับเรา</a>
+                <a href="/contactus" className="hover:text-white">
+                  เกี่ยวกับเรา
+                </a>
               </li>
               <li>
-                <a href="/trainer" className="hover:text-white">เทรนเนอร์ทั้งหมด</a>
+                <a href="/trainer" className="hover:text-white">
+                  เทรนเนอร์ทั้งหมด
+                </a>
               </li>
               <li>
-                <a href="/review" className="hover:text-white">รีวิวลูกค้า</a>
+                <a href="/review" className="hover:text-white">
+                  รีวิวลูกค้า
+                </a>
               </li>
               <li>
-                <a href="/contactus" className="hover:text-white">ติดต่อเรา</a>
+                <a href="/contactus" className="hover:text-white">
+                  ติดต่อเรา
+                </a>
               </li>
             </ul>
           </div>
@@ -259,7 +296,11 @@ export default function Contact() {
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded flex items-center justify-center transition"
               >
-                <img src="/images/face001.png" alt="Facebook" className="w-8 h-8 object-cover" />
+                <img
+                  src="/images/face001.png"
+                  alt="Facebook"
+                  className="w-8 h-8 object-cover"
+                />
               </a>
               <a
                 href="https://www.instagram.com/flaskukps/"
@@ -267,7 +308,11 @@ export default function Contact() {
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded flex items-center justify-center transition"
               >
-                <img src="/images/ig001.png" alt="Instagram" className="w-8 h-8 object-cover" />
+                <img
+                  src="/images/ig001.png"
+                  alt="Instagram"
+                  className="w-8 h-8 object-cover"
+                />
               </a>
               <a
                 href="https://www.youtube.com/@%E0%B8%84%E0%B8%93%E0%B8%B0%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B9%8C%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B9%8C%E0%B8%A1%E0%B8%81"
@@ -275,7 +320,11 @@ export default function Contact() {
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded flex items-center justify-center transition"
               >
-                <img src="/images/yt001.png" alt="YouTube" className="w-8 h-8 object-cover" />
+                <img
+                  src="/images/yt001.png"
+                  alt="YouTube"
+                  className="w-8 h-8 object-cover"
+                />
               </a>
             </div>
           </div>

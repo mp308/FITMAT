@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { Role } from "@prisma/client";
 import prisma from "../utils/prisma";
 
@@ -11,6 +11,30 @@ const USER_MEMBERSHIP_ROLES = new Set<Role>([
 
 const isUserMembershipRole = (role: Role) => USER_MEMBERSHIP_ROLES.has(role);
 
+const formatClass = (clazz: any) => {
+  const enrollmentCount = clazz._count?.enrollments ?? 0;
+  const availableSpots =
+    clazz.capacity !== null && clazz.capacity !== undefined
+      ? Math.max(clazz.capacity - enrollmentCount, 0)
+      : null;
+
+  return {
+    id: clazz.id,
+    title: clazz.title,
+    description: clazz.description,
+    startTime: clazz.startTime,
+    endTime: clazz.endTime,
+    capacity: clazz.capacity,
+    createdAt: clazz.createdAt,
+    updatedAt: clazz.updatedAt,
+    createdBy: clazz.createdBy,
+    trainer: clazz.trainer,
+    category: clazz.category,
+    requiredRole: clazz.requiredRole,
+    enrollmentCount,
+    availableSpots,
+  };
+};
 export const createClass = async (req: Request, res: Response) => {
   const {
     adminId,
@@ -123,25 +147,7 @@ export const listClasses = async (_req: Request, res: Response) => {
       },
     });
 
-    const formatted = classes.map((clazz) => ({
-      id: clazz.id,
-      title: clazz.title,
-      description: clazz.description,
-      startTime: clazz.startTime,
-      endTime: clazz.endTime,
-      capacity: clazz.capacity,
-      createdAt: clazz.createdAt,
-      updatedAt: clazz.updatedAt,
-      createdBy: clazz.createdBy,
-      trainer: clazz.trainer,
-      category: clazz.category,
-      requiredRole: clazz.requiredRole,
-      enrollmentCount: clazz._count.enrollments,
-      availableSpots:
-        clazz.capacity !== null && clazz.capacity !== undefined
-          ? Math.max(clazz.capacity - clazz._count.enrollments, 0)
-          : null,
-    }));
+    const formatted = classes.map(formatClass);
 
     return res.json(formatted);
   } catch (error) {
@@ -310,21 +316,7 @@ export const listTrainerClasses = async (req: Request, res: Response) => {
       },
     });
 
-    const formatted = classes.map((clazz) => ({
-      id: clazz.id,
-      title: clazz.title,
-      description: clazz.description,
-      startTime: clazz.startTime,
-      endTime: clazz.endTime,
-      capacity: clazz.capacity,
-      category: clazz.category,
-      requiredRole: clazz.requiredRole,
-      enrollmentCount: clazz._count.enrollments,
-      availableSpots:
-        clazz.capacity !== null && clazz.capacity !== undefined
-          ? Math.max(clazz.capacity - clazz._count.enrollments, 0)
-          : null,
-    }));
+    const formatted = classes.map(formatClass);
 
     return res.json({ trainer: { id: trainer.id, email: trainer.email }, classes: formatted });
   } catch (error) {
@@ -332,3 +324,54 @@ export const listTrainerClasses = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Failed to fetch trainer classes." });
   }
 };
+
+
+
+
+export const getClassById = async (req: Request, res: Response) => {
+  const classId = Number(req.params.classId);
+
+  if (Number.isNaN(classId)) {
+    return res.status(400).json({ message: "classId must be a valid number." });
+  }
+
+  try {
+    const clazz = await prisma.class.findUnique({
+      where: { id: classId },
+      include: {
+        createdBy: { select: { id: true, email: true, role: true } },
+        trainer: { select: { id: true, email: true, role: true } },
+        category: true,
+        _count: { select: { enrollments: true } },
+        enrollments: {
+          include: {
+            user: { select: { id: true, email: true, role: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!clazz) {
+      return res.status(404).json({ message: "Class not found." });
+    }
+
+    const formatted = formatClass(clazz);
+
+    return res.json({
+      ...formatted,
+      enrollments: clazz.enrollments.map((enrollment) => ({
+        id: enrollment.id,
+        createdAt: enrollment.createdAt,
+        user: enrollment.user,
+      })),
+    });
+  } catch (error) {
+    console.error("Failed to fetch class", error);
+    return res.status(500).json({ message: "Failed to fetch class." });
+  }
+};
+
+
+
+

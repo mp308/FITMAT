@@ -1,7 +1,13 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Header from "../../components/Layout/Header";
+import Footer from "../../components/Layout/Footer";
 
 const StarRow = () => (
-  <div className="flex gap-1 text-yellow-400 justify-center" aria-label="5 stars">
+  <div
+    className="flex gap-1 text-yellow-400 justify-center"
+    aria-label="5 stars"
+  >
     {Array.from({ length: 5 }).map((_, i) => (
       <svg key={i} viewBox="0 0 20 20" className="w-5 h-5 fill-current">
         <path d="M10 15.27 16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z" />
@@ -13,15 +19,40 @@ const StarRow = () => (
 export default function Home() {
   const [open, setOpen] = React.useState(false);
   const [reviewIndex, setReviewIndex] = useState(0);
+  const router = useRouter();
 
   const reviews = [
-  { img: "/images/review1.jpg", name: "ลูกค้าคนที่ 1", text: "เทรนเนอร์ใส่ใจมากโปรแกรมออกกำลังกายเหมาะกับเรา ทำตามแล้วเห็นผลจริง!" },
-  { img: "/images/review2.jpg", name: "ลูกค้าคนที่ 2", text: "จองคิวง่าย สะดวก เทรนเนอร์ให้คำแนะนำดีมาก ประทับใจสุดๆ" },
-  { img: "/images/review3.jpg", name: "ลูกค้าคนที่ 3", text: "ได้เทรนเนอร์ที่เข้าใจเป้าหมายของเรา ทำให้มีกำลังใจออกกำลังกายต่อเนื่อง" },
-  { img: "/images/review4.jpg", name: "ลูกค้าคนที่ 4", text: "บริการดีมาก เทรนเนอร์เป็นมืออาชีพและเป็นกันเอง แนะนำเลยครับ" },
-  { img: "/images/review5.jpg", name: "ลูกค้าคนที่ 5", text: "หลังใช้บริการ รู้สึกสุขภาพดีขึ้น น้ำหนักลดลงตามเป้าหมาย ขอบคุณมากครับ" },
-  { img: "/images/review6.jpg", name: "ลูกค้าคนที่ 6", text: "เหมาะกับคนที่ไม่มีเวลาไปฟิตเนส เทรนออนไลน์ก็สนุกและได้ผลจริง" },
-];
+    {
+      img: "/images/review1.jpg",
+      name: "ลูกค้าคนที่ 1",
+      text: "เทรนเนอร์ใส่ใจมากโปรแกรมออกกำลังกายเหมาะกับเรา ทำตามแล้วเห็นผลจริง!",
+    },
+    {
+      img: "/images/review2.jpg",
+      name: "ลูกค้าคนที่ 2",
+      text: "จองคิวง่าย สะดวก เทรนเนอร์ให้คำแนะนำดีมาก ประทับใจสุดๆ",
+    },
+    {
+      img: "/images/review3.jpg",
+      name: "ลูกค้าคนที่ 3",
+      text: "ได้เทรนเนอร์ที่เข้าใจเป้าหมายของเรา ทำให้มีกำลังใจออกกำลังกายต่อเนื่อง",
+    },
+    {
+      img: "/images/review4.jpg",
+      name: "ลูกค้าคนที่ 4",
+      text: "บริการดีมาก เทรนเนอร์เป็นมืออาชีพและเป็นกันเอง แนะนำเลยครับ",
+    },
+    {
+      img: "/images/review5.jpg",
+      name: "ลูกค้าคนที่ 5",
+      text: "หลังใช้บริการ รู้สึกสุขภาพดีขึ้น น้ำหนักลดลงตามเป้าหมาย ขอบคุณมากครับ",
+    },
+    {
+      img: "/images/review6.jpg",
+      name: "ลูกค้าคนที่ 6",
+      text: "เหมาะกับคนที่ไม่มีเวลาไปฟิตเนส เทรนออนไลน์ก็สนุกและได้ผลจริง",
+    },
+  ];
 
   const showReviews = [
     reviews[reviewIndex % reviews.length],
@@ -40,77 +71,7 @@ export default function Home() {
   return (
     <main className="w-full text-gray-800">
       {/* ===== Header ===== */}
-      <header className="absolute top-0 inset-x-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 sm:h-20 flex items-center justify-between">
-            {/* โลโก้ */}
-            <a href="#" className="flex items-center gap-2">
-              <span className="text-white text-2xl sm:text-3xl font-extrabold tracking-wide">
-                <span className="text-red-500">FIT</span>MATE
-              </span>
-            </a>
-
-            {/* เมนู desktop */}
-            <nav className="hidden md:flex items-center gap-8">
-              {[
-                { name: "home", href: "/" },
-                { name: "trainers", href: "/trainer" }, // <-- เปลี่ยนตรงนี้
-                { name: "reviews", href: "/review" },
-                { name: "contact us", href: "/contactus" },
-                { name: "login", href: "/login" },
-                { name: "register", href: "/register" }
-
-              ].map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-white text-lg font-semibold hover:text-red-400 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                >
-                  {item.name}
-                </a>
-              ))}
-            </nav>
-
-            {/* Hamburger icon mobile */}
-            <button
-              className="md:hidden flex items-center text-white"
-              onClick={() => setOpen(!open)}
-              aria-label="Open menu"
-            >
-              <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Mobile menu */}
-        {open && (
-          <div className="md:hidden bg-red-600 px-6 py-4">
-            <nav className="flex flex-col gap-4">
-              {[
-                { name: "home", href: "/" },
-                { name: "trainers", href: "/trainer" }, // <-- เปลี่ยนตรงนี้
-                { name: "reviews", href: "/review" },
-                { name: "contact us", href: "/contactus" }
-              ].map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-white text-lg font-semibold"
-                  onClick={() => setOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
-            </nav>
-          </div>
-        )}
-      </header>
+      <Header />
 
       {/* ===== Hero Section ===== */}
       <section className="relative overflow-hidden">
@@ -132,8 +93,9 @@ export default function Home() {
               <p className="mt-5 text-white/90 text-base sm:text-xl max-w-2xl">
                 "ค้นหาเทรนเนอร์ที่ใช่สำหรับคุณ พร้อมจองคิวง่ายในไม่กี่คลิก"
               </p>
-              <button className="mt-6 w-fit rounded-lg bg-white text-black font-bold px-6 py-2 shadow hover:bg-red-500 hover:text-white active:bg-red-600 active:scale-95 transition-all duration-200 cursor-pointer"
-                onClick={() => window.location.href = "/trainer"}
+              <button
+                className="mt-6 w-fit rounded-lg bg-white text-black font-bold px-6 py-2 shadow hover:bg-red-500 hover:text-white active:bg-red-600 active:scale-95 transition-all duration-200 cursor-pointer"
+                onClick={() => (window.location.href = "/trainer")}
               >
                 ค้นหาเทรนเนอร์
               </button>
@@ -157,10 +119,13 @@ export default function Home() {
             {/* ข้อความ */}
             <div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
-                "เทรนกับผู้เชี่ยวชาญที่ผ่าน<br className="hidden sm:block" />การรับรอง"
+                "เทรนกับผู้เชี่ยวชาญที่ผ่าน
+                <br className="hidden sm:block" />
+                การรับรอง"
               </h2>
               <p className="mb-8 text-lg text-gray-700 leading-relaxed">
-                เทรนเนอร์ของเราผ่านการคัดเลือกอย่างเข้มงวด พร้อมคุณสมบัติแบบมืออาชีพเพื่อมอบประสบการณ์ที่ดีที่สุด
+                เทรนเนอร์ของเราผ่านการคัดเลือกอย่างเข้มงวด
+                พร้อมคุณสมบัติแบบมืออาชีพเพื่อมอบประสบการณ์ที่ดีที่สุด
               </p>
               <a
                 href="/trainer"
@@ -174,16 +139,38 @@ export default function Home() {
       </section>
 
       {/* ===== รีวิวจากลูกค้า ===== */}
-      <section
-        className="relative py-16 sm:py-20 bg-gray-100 overflow-hidden"
-      >
+      <section className="relative py-16 sm:py-20 bg-gray-100 overflow-hidden">
         {/* ลวดลาย background */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <svg width="100%" height="100%">
-            <circle cx="10%" cy="20%" r="60" fill="#fbbf24" fillOpacity="0.08" />
-            <circle cx="90%" cy="80%" r="80" fill="#f87171" fillOpacity="0.07" />
-            <circle cx="50%" cy="10%" r="40" fill="#f87171" fillOpacity="0.06" />
-            <circle cx="80%" cy="30%" r="30" fill="#fbbf24" fillOpacity="0.06" />
+            <circle
+              cx="10%"
+              cy="20%"
+              r="60"
+              fill="#fbbf24"
+              fillOpacity="0.08"
+            />
+            <circle
+              cx="90%"
+              cy="80%"
+              r="80"
+              fill="#f87171"
+              fillOpacity="0.07"
+            />
+            <circle
+              cx="50%"
+              cy="10%"
+              r="40"
+              fill="#f87171"
+              fillOpacity="0.06"
+            />
+            <circle
+              cx="80%"
+              cy="30%"
+              r="30"
+              fill="#fbbf24"
+              fillOpacity="0.06"
+            />
           </svg>
         </div>
         <h2 className="relative z-10 text-center text-3xl sm:text-4xl font-extrabold text-gray-800 drop-shadow-lg mb-12 tracking-wide">
@@ -226,7 +213,9 @@ export default function Home() {
                   alt={review.name}
                   className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-4 border-yellow-300 shadow-lg group-hover:border-yellow-500 transition-all duration-300 bg-gray-100"
                 />
-                <div className="text-gray-800 font-bold mb-1">{review.name}</div>
+                <div className="text-gray-800 font-bold mb-1">
+                  {review.name}
+                </div>
                 <StarRow />
                 <p className="mt-6 text-gray-600 text-base min-h-[72px] font-medium">
                   "{review.text}"
@@ -289,8 +278,10 @@ export default function Home() {
                 STARTER
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mt-4 mb-6">Bronze</h3>
-            
+            <h3 className="text-2xl font-bold text-gray-800 mt-4 mb-6">
+              Bronze
+            </h3>
+
             <ul className="space-y-3 mb-8 text-left">
               <li className="flex items-center text-green-600">
                 <span className="mr-2">✓</span>
@@ -329,7 +320,7 @@ export default function Home() {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mt-4 mb-6">Gold</h3>
-            
+
             <ul className="space-y-3 mb-8 text-left">
               <li className="flex items-center text-green-600">
                 <span className="mr-2">✓</span>
@@ -367,8 +358,10 @@ export default function Home() {
                 ENTERPRISE
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mt-4 mb-6">Platinum</h3>
-            
+            <h3 className="text-2xl font-bold text-gray-800 mt-4 mb-6">
+              Platinum
+            </h3>
+
             <ul className="space-y-3 mb-8 text-left">
               <li className="flex items-center text-green-600">
                 <span className="mr-2">✓</span>
@@ -418,94 +411,39 @@ export default function Home() {
                 <div className="absolute -rotate-12 w-14 h-10 bg-yellow-400 rounded-lg"></div>
                 <div className="absolute rotate-6 w-14 h-10 bg-pink-400 rounded-lg"></div>
                 <div className="w-14 h-10 bg-blue-400 rounded-lg flex items-center justify-center relative z-10">
-                  <span className="text-black font-bold text-xs leading-tight">NEED<br/>HELP?</span>
+                  <span className="text-black font-bold text-xs leading-tight">
+                    NEED
+                    <br />
+                    HELP?
+                  </span>
                 </div>
               </div>
             </div>
             {/* ข้อความ */}
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-lg sm:text-xl font-bold mb-1">"อยากเริ่มต้นแปลี่ยนตัวเองใช่ไหม?"</h3>
-              <p className="text-gray-700 text-xs sm:text-sm">สมัครรับคำแนะนำฟรีจาก เทรนเนอร์และผู้เชี่ยวชาญ พิเศษก่อนใคร</p>
+              <h3 className="text-lg sm:text-xl font-bold mb-1">
+                "อยากเริ่มต้นแปลี่ยนตัวเองใช่ไหม?"
+              </h3>
+              <p className="text-gray-700 text-xs sm:text-sm">
+                สมัครรับคำแนะนำฟรีจาก เทรนเนอร์และผู้เชี่ยวชาญ พิเศษก่อนใคร
+              </p>
             </div>
             {/* Silhouette ด้านขวา */}
             <div className="absolute right-4 bottom-2 z-0">
               <div className="w-14 h-16 bg-yellow-200 opacity-30 rounded-lg rotate-12"></div>
             </div>
-            <button className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-all duration-200 cursor-pointer z-10 shadow text-sm sm:text-base">
+            <button
+              onClick={() => router.push("/payment")}
+              className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-all duration-200 cursor-pointer z-10 shadow text-sm sm:text-base"
+            >
               สมัครเลย
             </button>
           </div>
         </div>
       </section>
 
-    {/* ===== Footer ===== */}
-      <footer className="bg-red-600 text-white py-12">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h4 className="text-2xl font-extrabold mb-4">FITMATE</h4>
-            <p className="text-red-100 text-sm leading-6">
-              เปลี่ยนพลังงานให้เป็นรูปร่างในแบบของคุณ ออกแบบโปรแกรมเวิร์คเอาต์ให้เหมาะกับแต่ละคน
-            </p>
-          </div>
-          <div>
-            <h5 className="font-bold mb-4">สำนักงานใหญ่</h5>
-            <p className="text-red-100 text-sm leading-6">
-              มหาวิทยาลัยเกษตรศาสตร์<br />
-              วิทยาเขตกำแพงแสน<br />
-              1 หมู่ 6 ถนนมาลัยแมน<br />
-              ตำบลกำแพงแสน อำเภอกำแพงแสน<br />
-              จังหวัดนครปฐม 73140<br />
-              ประเทศไทย 
-            </p>
-          </div>
-          <div>
-            <h5 className="font-bold mb-4">หน้าเรา</h5>
-            <ul className="space-y-2 text-red-100 text-sm">
-              <li>
-                <a href="/contactus" className="hover:text-white">เกี่ยวกับเรา</a>
-              </li>
-              <li>
-                <a href="/trainer" className="hover:text-white">เทรนเนอร์ทั้งหมด</a>
-              </li>
-              <li>
-                <a href="/review" className="hover:text-white">รีวิวลูกค้า</a>
-              </li>
-              <li>
-                <a href="/contactus" className="hover:text-white">ติดต่อเรา</a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-bold mb-4">social links</h5>
-            <div className="flex gap-4">
-              <a
-                href="https://www.facebook.com/ITKUKPS/?locale=th_TH"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded flex items-center justify-center transition"
-              >
-                <img src="/images/face001.png" alt="Facebook" className="w-8 h-8 object-cover" />
-              </a>
-              <a
-                href="https://www.instagram.com/flaskukps/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded flex items-center justify-center transition"
-              >
-                <img src="/images/ig001.png" alt="Instagram" className="w-8 h-8 object-cover" />
-              </a>
-              <a
-                href="https://www.youtube.com/@%E0%B8%84%E0%B8%93%E0%B8%B0%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B9%8C%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B8%9A%E0%B8%A1%E0%B8%81"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded flex items-center justify-center transition"
-              >
-                <img src="/images/yt001.png" alt="YouTube" className="w-8 h-8 object-cover" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* ===== Footer ===== */}
+      <Footer />
     </main>
   );
 }
