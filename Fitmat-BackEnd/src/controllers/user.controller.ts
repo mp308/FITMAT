@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../utils/prisma";
+import { Role } from "@prisma/client";
 
 const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -8,6 +9,14 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+
+const isValidRole = (value: unknown): value is Role => {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  return (Object.values(Role) as string[]).includes(value);
+};
 
 const normalizeProfileImage = (input: unknown): string | null => {
   if (input === null || input === undefined) {
@@ -187,3 +196,55 @@ export const changePassword = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Failed to change password" });
   }
 };
+
+export const listUsers = async (req: Request, res: Response) => {
+  const { adminId, role } = req.query as { adminId?: string; role?: string };
+
+  if (!adminId) {
+    return res.status(400).json({ message: "adminId query parameter is required." });
+  }
+
+  const admin = await prisma.user.findUnique({ where: { id: Number(adminId) } });
+  if (!admin || admin.role !== Role.ADMIN) {
+    return res.status(403).json({ message: "Only admins can view users." });
+  }
+
+  let filterRole: Role | undefined;
+  if (role) {
+    if (!isValidRole(role)) {
+      return res.status(400).json({ message: "Invalid role." });
+    }
+    filterRole = role as Role;
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: filterRole,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.json(users);
+  } catch (error) {
+    console.error("Failed to fetch users", error);
+    return res.status(500).json({ message: "Failed to fetch users." });
+  }
+};
+
+export const listUserRoles = async (_req: Request, res: Response) => {
+  try {
+    return res.json(Object.values(Role));
+  } catch (error) {
+    console.error("Failed to fetch user roles", error);
+    return res.status(500).json({ message: "Failed to fetch user roles." });
+  }
+};
+

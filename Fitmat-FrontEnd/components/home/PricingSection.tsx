@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, FadeIn } from '../common';
-
 interface PricingPlan {
   name: string;
   title: string;
@@ -14,7 +13,42 @@ interface PricingPlan {
   buttonText: string;
 }
 
+type SelectedPlan = {
+  name: string;
+  title: string;
+  amountFormatted: string;
+  qrCodeUrl: string;
+};
+
 export default function PricingSection() {
+  const phoneNumber =
+    process.env.NEXT_PUBLIC_PROMPTPAY_PHONE ?? "0812345678";
+  const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openPaymentModal = (plan: PricingPlan) => {
+    const sanitizedPrice = plan.price.replace(/[^\d.]/g, "");
+    const amountNumber = Number.parseFloat(sanitizedPrice);
+    const amountFormatted =
+      Number.isFinite(amountNumber) && amountNumber > 0
+        ? amountNumber.toFixed(2)
+        : "0.00";
+    const qrCodeUrl = `https://promptpay.io/${phoneNumber}/${amountFormatted}.png`;
+
+    setSelectedPlan({
+      name: plan.name,
+      title: plan.title,
+      amountFormatted,
+      qrCodeUrl,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closePaymentModal = () => {
+    setIsModalOpen(false);
+    setSelectedPlan(null);
+  };
+
   const plans: PricingPlan[] = [
     {
       name: 'bronze',
@@ -59,7 +93,6 @@ export default function PricingSection() {
       buttonText: 'เลือกแพ็กเกจพรีเมียม',
     },
   ];
-
   return (
     <section className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 via-white to-red-50 relative overflow-hidden">
       {/* Background decorations */}
@@ -68,7 +101,6 @@ export default function PricingSection() {
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-red-200 rounded-full opacity-15"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-red-50 rounded-full opacity-10"></div>
       </div>
-
       <div className="relative z-10">
         <FadeIn direction="up">
           <div className="text-center mb-16">
@@ -84,7 +116,6 @@ export default function PricingSection() {
             </p>
           </div>
         </FadeIn>
-
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-6">
           {plans.map((plan, index) => (
           <FadeIn key={plan.name} direction="up" delay={200 + index * 200}>
@@ -102,13 +133,11 @@ export default function PricingSection() {
                 {plan.badge}
               </span>
             </div>
-            
             <h3 className={`text-2xl font-bold mt-6 mb-6 ${
               plan.name === 'gold' ? 'text-red-600' : 'text-gray-800'
             }`}>
               {plan.title}
             </h3>
-
             <ul className="space-y-3 mb-8 text-left">
               {plan.features.map((feature, index) => (
                 <li
@@ -124,13 +153,11 @@ export default function PricingSection() {
                 </li>
               ))}
             </ul>
-
             <div className={`text-4xl font-bold mb-2 ${
               plan.name === 'gold' ? 'text-red-600' : 'text-gray-900'
             }`}>
               {plan.price} <span className="text-lg text-gray-600">{plan.period}</span>
             </div>
-            
             <Button
               variant={plan.name === 'gold' ? 'primary' : 'danger'}
               size="lg"
@@ -139,17 +166,16 @@ export default function PricingSection() {
                   ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
                   : ''
               }`}
+              type="button"
+              onClick={() => openPaymentModal(plan)}
             >
               {plan.buttonText}
             </Button>
-            
             <p className="text-gray-400 text-sm">ยกเลิกได้ทุกเมื่อ</p>
-            
             {/* Enhanced hover effects */}
             <div className={`pointer-events-none absolute inset-0 rounded-3xl border-2 opacity-0 group-hover:opacity-100 transition-all duration-300 ${
               plan.name === 'gold' ? 'border-yellow-400' : 'border-red-500'
             }`}></div>
-            
             {/* Glow effect for popular plan */}
             {plan.name === 'gold' && (
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-yellow-200/20 to-red-200/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
@@ -159,6 +185,56 @@ export default function PricingSection() {
           ))}
         </div>
       </div>
+
+      {isModalOpen && selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closePaymentModal}
+          ></div>
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={closePaymentModal}
+              className="absolute right-4 top-4 rounded-full bg-gray-100 p-2 text-gray-500 transition hover:bg-gray-200"
+              aria-label="Close QR modal"
+            >
+              X
+            </button>
+            <div className="text-center space-y-4">
+              <h3 className="text-2xl font-bold text-gray-900">
+                {selectedPlan.title} Plan
+              </h3>
+              <p className="text-gray-600">
+                Amount: <span className="font-semibold text-gray-900">THB {selectedPlan.amountFormatted}</span>
+              </p>
+              <p className="text-sm text-gray-500">
+                PromptPay number: {phoneNumber}
+              </p>
+              <div className="mx-auto flex h-64 w-64 items-center justify-center rounded-2xl border border-gray-200 bg-white p-4 shadow-inner">
+                <img
+                  src={selectedPlan.qrCodeUrl}
+                  alt={`PromptPay QR for ${selectedPlan.title} plan`}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                Scan the QR code with your banking app to complete the payment.
+              </p>
+              <button
+                type="button"
+                onClick={closePaymentModal}
+                className="mt-2 inline-flex items-center justify-center rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-red-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
+
+
+

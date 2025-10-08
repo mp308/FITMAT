@@ -10,11 +10,13 @@ interface Review {
     id: number;
     email: string;
     role: string;
+    profileImage: string | null;
   };
   trainer: {
     id: number;
     email: string;
     role: string;
+    profileImage: string | null;
   };
 }
 
@@ -34,36 +36,47 @@ export default function ReviewsSection() {
         if (!response.ok) {
           throw new Error('Failed to fetch reviews');
         }
-        const data = await response.json();
-        setReviews(data);
+        const data = (await response.json()) as Review[];
+        const normalized = data.map((review) => ({
+          ...review,
+          reviewer: {
+            ...review.reviewer,
+            profileImage: review.reviewer?.profileImage ?? null,
+          },
+          trainer: {
+            ...review.trainer,
+            profileImage: review.trainer?.profileImage ?? null,
+          },
+        }));
+        setReviews(normalized);
       } catch (err) {
         console.error('Error fetching reviews:', err);
-        setError('ไม่สามารถโหลดรีวิวได้');
-        // Fallback to mock data if API fails
+        setError('Unable to load reviews right now.');
+        const now = new Date().toISOString();
         setReviews([
           {
             id: 1,
-            comment: "เทรนเนอร์ใส่ใจมากโปรแกรมออกกำลังกายเหมาะกับเรา ทำตามแล้วเห็นผลจริง!",
+            comment: "Great trainer support and personalized guidance.",
             rating: 5,
-            createdAt: new Date().toISOString(),
-            reviewer: { id: 1, email: "customer1@example.com", role: "USER" },
-            trainer: { id: 2, email: "trainer@example.com", role: "TRAINER" }
+            createdAt: now,
+            reviewer: { id: 1, email: 'customer1@example.com', role: 'USER', profileImage: null },
+            trainer: { id: 2, email: 'trainer@example.com', role: 'TRAINER', profileImage: null }
           },
           {
             id: 2,
-            comment: "จองคิวง่าย สะดวก เทรนเนอร์ให้คำแนะนำดีมาก ประทับใจสุดๆ",
+            comment: "Fun class environment that keeps me motivated.",
             rating: 5,
-            createdAt: new Date().toISOString(),
-            reviewer: { id: 3, email: "customer2@example.com", role: "USER" },
-            trainer: { id: 2, email: "trainer@example.com", role: "TRAINER" }
+            createdAt: now,
+            reviewer: { id: 3, email: 'customer2@example.com', role: 'USER', profileImage: null },
+            trainer: { id: 2, email: 'trainer@example.com', role: 'TRAINER', profileImage: null }
           },
           {
             id: 3,
-            comment: "ได้เทรนเนอร์ที่เข้าใจเป้าหมายของเรา ทำให้มีกำลังใจออกกำลังกายต่อเนื่อง",
+            comment: "Saw clear results within weeks—highly recommended.",
             rating: 5,
-            createdAt: new Date().toISOString(),
-            reviewer: { id: 4, email: "customer3@example.com", role: "USER" },
-            trainer: { id: 2, email: "trainer@example.com", role: "TRAINER" }
+            createdAt: now,
+            reviewer: { id: 4, email: 'customer3@example.com', role: 'USER', profileImage: null },
+            trainer: { id: 2, email: 'trainer@example.com', role: 'TRAINER', profileImage: null }
           }
         ]);
       } finally {
@@ -75,7 +88,12 @@ export default function ReviewsSection() {
   }, []);
 
   // Generate profile images based on reviewer email (deterministic)
-  const getProfileImage = (email: string) => {
+  const getProfileImage = (reviewer: Review["reviewer"]) => {
+    if (reviewer.profileImage) {
+      return reviewer.profileImage;
+    }
+
+    const { email } = reviewer;
     // Use a simple hash to generate consistent "avatar" images
     const hash = email.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
@@ -202,7 +220,7 @@ export default function ReviewsSection() {
               </svg>
               
               <img
-                src={getProfileImage(review.reviewer.email)}
+                src={getProfileImage(review.reviewer)}
                 alt={review.reviewer.email}
                 className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-4 border-yellow-300 shadow-lg group-hover:border-yellow-500 transition-all duration-300 bg-gray-100"
               />
@@ -274,3 +292,4 @@ export default function ReviewsSection() {
     </section>
   );
 }
+
