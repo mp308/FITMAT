@@ -211,4 +211,22 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+export const logout = async (req: Request, res: Response) => {
+  try {
+    // สำหรับ JWT stateless authentication
+    // เราจะส่ง response กลับไปให้ client ลบ token ออกจาก localStorage
+    
+    // หากต้องการ blacklist token (optional)
+    // สามารถเก็บ token ที่ถูก revoke ไว้ใน database หรือ Redis
+    
+    return res.status(200).json({ 
+      message: "Logged out successfully.",
+      success: true 
+    });
+  } catch (error) {
+    console.error("Error during logout", error);
+    return res.status(500).json({ message: "Failed to logout." });
+  }
+};
+
 

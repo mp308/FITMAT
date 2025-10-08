@@ -8,27 +8,68 @@ type ReviewSummary = {
   ratingCounts: Record<string, number>;
 };
 
+type Review = {
+  id: number;
+  comment: string;
+  rating: number | null;
+  createdAt: string;
+  reviewer: {
+    id: number;
+    email: string;
+    role: string;
+  };
+  trainer: {
+    id: number;
+    email: string;
+    role: string;
+  };
+};
+
 export default function Review() {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate profile image based on email (deterministic)
+  const getProfileImage = (email: string) => {
+    const hash = email.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    const avatarIndex = Math.abs(hash) % 6 + 1;
+    return `/images/review${avatarIndex}.jpg`;
+  };
+
   useEffect(() => {
-    const fetchSummary = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:4000/api/reviews/summary");
-        if (!res.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");
-        const data = await res.json();
-        setSummary(data);
+        // Fetch both summary and reviews
+        const [summaryRes, reviewsRes] = await Promise.all([
+          fetch("http://localhost:4000/api/reviews/summary"),
+          fetch("http://localhost:4000/api/reviews")
+        ]);
+        
+        if (!summaryRes.ok || !reviewsRes.ok) {
+          throw new Error("โหลดข้อมูลไม่สำเร็จ");
+        }
+        
+        const [summaryData, reviewsData] = await Promise.all([
+          summaryRes.json(),
+          reviewsRes.json()
+        ]);
+        
+        setSummary(summaryData);
+        setReviews(reviewsData);
       } catch (err: any) {
         setError(err.message || "เกิดข้อผิดพลาด");
       } finally {
         setLoading(false);
       }
     };
-    fetchSummary();
+    fetchData();
   }, []);
 
   return (
@@ -134,6 +175,81 @@ export default function Review() {
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ===== รีวิวจริงจากลูกค้า ===== */}
+      <section className="py-16 bg-gray-50 relative">
+        <div className="relative max-w-6xl mx-auto px-4">
+          <h2 className="text-center text-3xl font-bold text-gray-800 mb-12">
+            รีวิวจริงจากลูกค้า
+          </h2>
+          
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+              <p className="text-gray-500 mt-4">กำลังโหลดรีวิว...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500 text-lg">❌ {error}</p>
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">ยังไม่มีรีวิวจากลูกค้า</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {reviews.slice(0, 6).map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <img
+                      src={getProfileImage(review.reviewer.email)}
+                      alt={review.reviewer.email}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-red-100"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = "/images/review1.jpg";
+                      }}
+                    />
+                    <div>
+                      <h4 className="font-semibold text-gray-900">
+                        {review.reviewer.email.split('@')[0]}
+                      </h4>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <svg
+                            key={i}
+                            viewBox="0 0 20 20"
+                            className={`w-4 h-4 ${review.rating && i < (review.rating || 0) ? "text-yellow-400" : "text-gray-300"} fill-current`}
+                          >
+                            <path d="M10 15.27L16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z" />
+                          </svg>
+                        ))}
+                        {review.rating && (
+                          <span className="text-sm text-gray-600 ml-1">({review.rating}/5)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-700 leading-relaxed mb-4">
+                    &ldquo;{review.comment}&rdquo;
+                  </p>
+                  
+                  <div className="text-xs text-gray-500">
+                    {new Date(review.createdAt).toLocaleDateString('th-TH', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

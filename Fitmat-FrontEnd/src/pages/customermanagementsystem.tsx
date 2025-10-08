@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import UserControl from "../../components/admin/usercontrol";
+import UserControl from "../../components/admin/UserControl";
 import ClassControl from "../../components/admin/ClassControl";
 import ClassCategory from "../../components/admin/ClassCategory";
 import ContactControl from "../../components/admin/ContactControl";

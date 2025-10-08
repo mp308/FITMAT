@@ -1,10 +1,13 @@
 import { Router } from "express";
-import { listUsers, listRoles, updateUserRole } from "../controllers/user.controller";
+import { getUserProfile, updateUserProfile, changePassword } from "../controllers/user.controller";
 
 const router = Router();
 
-router.get("/", listUsers);
-router.get("/roles", listRoles);
-router.patch("/:userId/role", updateUserRole);
+// User profile routes
+router.get("/:id", getUserProfile);
+router.put("/:id", updateUserProfile);
+
+// Password change route
+router.post("/change-password", changePassword);
 
 export default router;
