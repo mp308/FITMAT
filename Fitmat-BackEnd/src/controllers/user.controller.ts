@@ -1,6 +1,48 @@
 import { Request, Response } from "express";
 import prisma from "../utils/prisma";
 
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+const normalizeProfileImage = (input: unknown): string | null => {
+  if (input === null || input === undefined) {
+    return null;
+  }
+
+  if (typeof input !== "string") {
+    throw new Error("Profile image must be provided as a base64 encoded string.");
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/^data:(image\/[A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  if (!match) {
+    throw new Error("Profile image must be a valid base64 data URL.");
+  }
+
+  const [, mimeType, rawBase64] = match;
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new Error("Unsupported profile image type.");
+  }
+
+  const base64Data = rawBase64.replace(/\s/g, "");
+  const byteLength = Buffer.from(base64Data, "base64").length;
+
+  if (byteLength > MAX_PROFILE_IMAGE_BYTES) {
+    throw new Error("Profile image must be 2MB or smaller.");
+  }
+
+  return `data:${mimeType};base64,${base64Data}`;
+};
+
 // Get user profile
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
@@ -34,7 +76,10 @@ export const getUserProfile = async (req: Request, res: Response) => {
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.id);
-    const { username, profileImage } = req.body;
+    const { username, profileImage: rawProfileImage } = req.body as {
+      username?: string | null;
+      profileImage?: string | null;
+    };
 
     // Check if username is already taken by another user
     if (username) {
@@ -50,13 +95,34 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       }
     }
 
+    const dataToUpdate: {
+      username?: string | null;
+      profileImage?: string | null;
+      updatedAt: Date;
+    } = {
+      updatedAt: new Date(),
+    };
+
+    if (typeof username === "string") {
+      dataToUpdate.username = username || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "profileImage")) {
+      try {
+        dataToUpdate.profileImage = normalizeProfileImage(rawProfileImage);
+      } catch (imageError) {
+        return res.status(400).json({
+          message:
+            imageError instanceof Error
+              ? imageError.message
+              : "Invalid profile image.",
+        });
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        username: username || null,
-        profileImage: profileImage || null,
-        updatedAt: new Date(),
-      },
+      data: dataToUpdate,
       select: {
         id: true,
         email: true,

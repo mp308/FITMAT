@@ -3,6 +3,8 @@ CREATE TABLE `User` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `email` VARCHAR(191) NOT NULL,
     `passwordHash` VARCHAR(191) NOT NULL,
+    `username` VARCHAR(191) NULL,
+    `profileImage` VARCHAR(191) NULL,
     `resetToken` VARCHAR(191) NULL,
     `resetTokenExpiry` DATETIME(3) NULL,
     `role` ENUM('USER', 'USER_BRONZE', 'USER_GOLD', 'USER_PLATINUM', 'TRAINER', 'ADMIN') NOT NULL DEFAULT 'USER',
@@ -10,6 +12,7 @@ CREATE TABLE `User` (
     `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `User_email_key`(`email`),
+    UNIQUE INDEX `User_username_key`(`username`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -86,7 +89,7 @@ CREATE TABLE `PaymentProof` (
     `note` VARCHAR(191) NULL,
     `filename` VARCHAR(191) NULL,
     `mimeType` VARCHAR(191) NULL,
-    `imageBase64` VARCHAR(191) NOT NULL,
+    `imageBase64` LONGTEXT NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)

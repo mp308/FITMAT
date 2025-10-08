@@ -15,11 +15,16 @@ const menuItems = [
   { name: "register", href: "/register", authOnly: false },
 ];
 
+type HeaderUser = User & {
+  username?: string | null;
+  profileImage?: string | null;
+};
+
 export default function Header() {
   const [open, setOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<HeaderUser | null>(null);
   const [checkedToken, setCheckedToken] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -35,8 +40,63 @@ export default function Header() {
 
   useEffect(() => {
     const currentUser = getCurrentUser();
-    setUser(currentUser);
+
+    if (!currentUser) {
+      setUser(null);
+      setCheckedToken(true);
+      return;
+    }
+
+    setUser({
+      ...currentUser,
+      username: currentUser.email ? currentUser.email.split("@")[0] : currentUser.email,
+      profileImage: null,
+    });
     setCheckedToken(true);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setCheckedToken(true);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`http://localhost:4000/api/users/${currentUser.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const profile = await response.json();
+
+        if (isMounted) {
+          setUser({
+            ...currentUser,
+            username: profile.username ?? currentUser.email.split("@")[0],
+            profileImage: profile.profileImage ? profile.profileImage : null,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      } finally {
+        if (isMounted) {
+          setCheckedToken(true);
+        }
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Close dropdown when clicking outside
@@ -122,11 +182,11 @@ export default function Header() {
                   className="flex items-center gap-3 text-white hover:text-red-200 transition-colors"
                 >
                   <img
-                    src={getProfileImage(user.email)}
+                    src={user.profileImage || getProfileImage(user.email)}
                     alt={user.username || user.email}
                     className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/images/review1.jpg";
+                      (e.currentTarget as HTMLImageElement).src = getProfileImage(user.email);
                     }}
                   />
                   <div className="hidden sm:block text-left">
@@ -153,11 +213,11 @@ export default function Header() {
                     <div className="px-4 py-3 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         <img
-                          src={getProfileImage(user.email)}
+                          src={user.profileImage || getProfileImage(user.email)}
                           alt={user.username || user.email}
                           className="w-10 h-10 rounded-full object-cover border-2 border-red-100"
                           onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = "/images/review1.jpg";
+                            (e.currentTarget as HTMLImageElement).src = getProfileImage(user.email);
                           }}
                         />
                         <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Layout } from "../../components/Layout";
 import { Button, Input, Card } from "../../components/common";
@@ -11,6 +11,8 @@ interface User {
   role: string;
 }
 
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
+
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -22,9 +24,11 @@ export default function SettingsPage() {
   // Form states
   const [username, setUsername] = useState("");
   const [profileImage, setProfileImage] = useState("");
+  const [profileImageDirty, setProfileImageDirty] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate profile image based on email (deterministic)
   const getProfileImage = (email: string) => {
@@ -59,7 +63,8 @@ export default function SettingsPage() {
           const userData = await response.json();
           setUser(userData);
           setUsername(userData.username || "");
-          setProfileImage(userData.profileImage || "");
+          setProfileImage(userData.profileImage ?? "");
+          setProfileImageDirty(false);
         } else {
           // Fallback: create user object from token
           setUser({
@@ -70,7 +75,8 @@ export default function SettingsPage() {
             role: payload.role
           });
           setUsername(payload.username || "");
-          setProfileImage(payload.profileImage || "");
+          setProfileImage(payload.profileImage ?? "");
+          setProfileImageDirty(false);
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -82,6 +88,62 @@ export default function SettingsPage() {
 
     fetchUser();
   }, [router]);
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files?.length) {
+      return;
+    }
+
+    const file = event.target.files[0];
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_IMAGE_BYTES) {
+      setError("Profile image must be 2MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+          } else {
+            reject(new Error("Unable to read file content."));
+          }
+        };
+        reader.onerror = () => reject(new Error("Unable to read file content."));
+        reader.readAsDataURL(file);
+      });
+
+      setProfileImage(base64);
+      setProfileImageDirty(true);
+    } catch (readError) {
+      console.error("Failed to read profile image:", readError);
+      setError("Failed to read profile image.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveProfileImage = () => {
+    setProfileImage("");
+    setProfileImageDirty(true);
+    setError(null);
+    setSuccess(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,31 +161,44 @@ export default function SettingsPage() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userId = payload.id;
 
+      const requestBody: {
+        username: string | null;
+        profileImage?: string | null;
+      } = {
+        username: username || null,
+      };
+
+      if (profileImageDirty) {
+        requestBody.profileImage = profileImage || null;
+      }
+
       const response = await fetch(`http://localhost:4000/api/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          username: username || null,
-          profileImage: profileImage || null
-        })
+        body: JSON.stringify(requestBody)
       });
 
-      if (response.ok) {
-        setSuccess('บันทึกการตั้งค่าเรียบร้อยแล้ว');
-        // Update user state
-        if (user) {
-          setUser({ ...user, username, profileImage });
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'เกิดข้อผิดพลาดในการบันทึก');
+      const responseData: User = await response.json();
+
+      if (!response.ok) {
+        setError(responseData.message || "Failed to update profile.");
+        return;
       }
+
+      setUser(responseData);
+      setUsername(responseData.username || "");
+      setProfileImage(responseData.profileImage ?? "");
+      setProfileImageDirty(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setSuccess("Profile updated successfully.");
     } catch (error) {
-      console.error('Error saving profile:', error);
-      setError('เกิดข้อผิดพลาดในการบันทึก');
+      console.error("Error saving profile:", error);
+      setError("Failed to update profile.");
     } finally {
       setSaving(false);
     }
@@ -131,9 +206,9 @@ export default function SettingsPage() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
-      setError('รหัสผ่านใหม่ไม่ตรงกัน');
+      setError("New password and confirmation do not match.");
       return;
     }
 
@@ -161,22 +236,21 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        setSuccess('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+        setSuccess("Password updated successfully.");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
         const errorData = await response.json();
-        setError(errorData.message || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+        setError(errorData.message || "Failed to change password.");
       }
     } catch (error) {
-      console.error('Error changing password:', error);
-      setError('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+      console.error("Error changing password:", error);
+      setError("Failed to change password.");
     } finally {
       setSaving(false);
     }
   };
-
   if (loading) {
     return (
       <Layout>
@@ -255,14 +329,33 @@ export default function SettingsPage() {
                 placeholder="ใส่ชื่อผู้ใช้ที่ต้องการ"
               />
 
-              <Input
-                label="URL รูปโปรไฟล์"
-                type="url"
-                value={profileImage}
-                onChange={(e) => setProfileImage(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-              />
-
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Profile Image
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
+                />
+                <p className="text-xs text-gray-500">
+                  Upload a JPG, PNG, GIF, or WEBP image up to 2MB.
+                </p>
+                {profileImage && (
+                  <div className="flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                    <span>Profile image selected</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfileImage}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
               <Button
                 type="submit"
                 variant="primary"
@@ -341,4 +434,3 @@ export default function SettingsPage() {
     </Layout>
   );
 }
-

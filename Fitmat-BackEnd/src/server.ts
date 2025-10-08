@@ -17,7 +17,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "2mb" }));
 
 app.use("/api", authRoutes);
 app.use("/api/reviews", reviewRoutes);
