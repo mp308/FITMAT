@@ -22,7 +22,7 @@ router.post("/change-password", changePassword);
 // User profile routes
 router.get("/:id/classes", getUserEnrolledClasses);
 router.delete("/:id/classes/:classId", deleteUserClassEnrollment);
-router.patch("/:id/role", updateUserRole);
+router.patch("/:userId/role", updateUserRole);
 router.get("/:id", getUserProfile);
 router.put("/:id", updateUserProfile);
 

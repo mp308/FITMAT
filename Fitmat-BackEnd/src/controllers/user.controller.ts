@@ -302,61 +302,50 @@ export const deleteUserClassEnrollment = async (req: Request, res: Response) => 
 };
 
 export const updateUserRole = async (req: Request, res: Response) => {
-  const userId = Number(req.params.id);
-  const { role, adminId } = req.body as { role?: Role | string; adminId?: number };
+  const { adminId } = req.body as { adminId?: number };
+  const userId = Number(req.params.userId);
+  const { role } = req.body as { role?: string };
 
-  if (Number.isNaN(userId)) {
-    return res.status(400).json({ message: "User id must be a valid number." });
-  }
-
-  if (!role) {
-    return res.status(400).json({ message: "role is required." });
-  }
-
-  if (adminId === undefined || adminId === null || Number.isNaN(Number(adminId))) {
-    return res.status(400).json({ message: "adminId is required." });
+  if (!adminId || Number.isNaN(userId) || !role) {
+    return res.status(400).json({ message: "adminId, userId, and role are required." });
   }
 
   if (!isValidRole(role)) {
-    return res.status(400).json({ message: "Invalid role value." });
+    return res.status(400).json({ message: "Invalid role." });
+  }
+
+  const admin = await prisma.user.findUnique({ where: { id: Number(adminId) } });
+  if (!admin || admin.role !== Role.ADMIN) {
+    return res.status(403).json({ message: "Only admins can update user roles." });
+  }
+
+  if (role === Role.ADMIN && admin.id === userId) {
+    return res.status(400).json({ message: "Cannot change own role to ADMIN again." });
   }
 
   try {
-    const [admin, targetUser] = await Promise.all([
-      prisma.user.findUnique({ where: { id: Number(adminId) } }),
-      prisma.user.findUnique({ where: { id: userId } }),
-    ]);
-
-    if (!admin || admin.role !== Role.ADMIN) {
-      return res.status(403).json({ message: "Only admins can update user roles." });
-    }
-
-    if (!targetUser) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        role,
-        updatedAt: new Date(),
-      },
+      data: { role: role as Role },
       select: {
         id: true,
         email: true,
         role: true,
-        username: true,
-        createdAt: true,
         updatedAt: true,
       },
     });
 
     return res.json(updatedUser);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "User not found." });
+    }
+
     console.error("Failed to update user role", error);
     return res.status(500).json({ message: "Failed to update user role." });
   }
 };
+
 
 // Change password
 export const changePassword = async (req: Request, res: Response) => {
