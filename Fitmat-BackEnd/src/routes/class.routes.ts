@@ -2,6 +2,7 @@
 import {
   createClass,
   listClasses,
+  listUpcomingClasses,
   getClassById,
   enrollInClass,
   listClassEnrollments,
@@ -11,6 +12,7 @@ import {
 const router = Router();
 
 router.get("/", listClasses);
+router.get("/listclassupcoming", listUpcomingClasses);
 router.get("/trainer/:trainerId", listTrainerClasses);
 router.get("/:classId", getClassById);
 router.post("/", createClass);

@@ -11,6 +11,7 @@ interface TrainerCardProps {
     createdAt: string;
     totalReviews: number;
     averageRating: number | null;
+    profileImage?: string | null;
   };
   onBook?: (trainerId: number, bookingData: any) => void;
   showBookingButton?: boolean;
@@ -30,8 +31,8 @@ export default function TrainerCard({
     }
   };
 
-  // Generate profile image based on trainer email (deterministic)
-  const getTrainerImage = (email: string) => {
+  // Generate profile image based on trainer email (deterministic fallback)
+  const getFallbackImage = (email: string) => {
     // Use a simple hash to generate consistent "avatar" images
     const hash = email.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
@@ -39,6 +40,24 @@ export default function TrainerCard({
     }, 0);
     const avatarIndex = Math.abs(hash) % 6 + 1;
     return `/images/review${avatarIndex}.jpg`;
+  };
+
+  const resolveImageSrc = (email: string, profileImage?: string | null) => {
+    if (profileImage) {
+      if (
+        profileImage.startsWith('data:image') ||
+        profileImage.startsWith('http')
+      ) {
+        return profileImage;
+      }
+      if (profileImage.includes('base64,')) {
+        return profileImage.startsWith('data:')
+          ? profileImage
+          : `data:${profileImage}`;
+      }
+      return `data:image/jpeg;base64,${profileImage}`;
+    }
+    return getFallbackImage(email);
   };
 
   const StarRating = ({ rating, size = 'w-5 h-5' }: { rating: number | null; size?: string }) => (
@@ -60,11 +79,11 @@ export default function TrainerCard({
       <Card className="p-6 text-center hover:scale-105 transition-all duration-300 group">
         <div className="relative">
           <img
-            src={getTrainerImage(trainer.email)}
+            src={resolveImageSrc(trainer.email, trainer.profileImage)}
             alt={`เทรนเนอร์ ${trainer.email}`}
             className="w-28 h-28 rounded-full object-cover mx-auto mb-4 border-4 border-red-100 group-hover:border-red-300 transition-colors"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = "/images/review1.jpg";
+              (e.currentTarget as HTMLImageElement).src = getFallbackImage(trainer.email);
             }}
           />
           <div className="absolute -top-2 -right-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">

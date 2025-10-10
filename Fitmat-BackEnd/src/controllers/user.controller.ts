@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../utils/prisma";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 
 const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -50,6 +50,53 @@ const normalizeProfileImage = (input: unknown): string | null => {
   }
 
   return `data:${mimeType};base64,${base64Data}`;
+};
+
+const enrollmentWithClassInclude = {
+  class: {
+    include: {
+      trainer: {
+        select: { id: true, email: true, role: true, profileImage: true },
+      },
+      createdBy: { select: { id: true, email: true, role: true } },
+      category: true,
+      _count: { select: { enrollments: true } },
+    },
+  },
+} as const;
+
+type EnrollmentWithClass = Prisma.ClassEnrollmentGetPayload<{
+  include: typeof enrollmentWithClassInclude;
+}>;
+
+const formatEnrolledClass = (enrollment: EnrollmentWithClass) => {
+  const classData = enrollment.class;
+  const enrollmentCount = classData._count?.enrollments ?? 0;
+  const availableSpots =
+    classData.capacity !== null && classData.capacity !== undefined
+      ? Math.max(classData.capacity - enrollmentCount, 0)
+      : null;
+
+  return {
+    enrollmentId: enrollment.id,
+    enrolledAt: enrollment.createdAt,
+    class: {
+      id: classData.id,
+      title: classData.title,
+      description: classData.description,
+      startTime: classData.startTime,
+      endTime: classData.endTime,
+      capacity: classData.capacity,
+      createdAt: classData.createdAt,
+      updatedAt: classData.updatedAt,
+      requiredRole: classData.requiredRole,
+      enrollmentCount,
+      availableSpots,
+      trainer: classData.trainer,
+      createdBy: classData.createdBy,
+      category: classData.category,
+    },
+  };
 };
 
 // Get user profile
@@ -147,6 +194,167 @@ export const updateUserProfile = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Failed to update user profile", error);
     return res.status(500).json({ message: "Failed to update user profile" });
+  }
+};
+
+export const getUserEnrolledClasses = async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+
+  if (Number.isNaN(userId)) {
+    return res.status(400).json({ message: "User id must be a valid number." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // ⚠️ ให้แน่ใจว่า enrollmentWithClassInclude เลือก field เหล่านี้ของ class มาด้วย:
+    // id, title/name, startTime, endTime (ถ้ามี)
+    const enrollments = await prisma.classEnrollment.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: enrollmentWithClassInclude,
+    });
+
+    const now = new Date();
+
+    // ช่วยคำนวณสถานะให้แต่ละรายการ
+    const withStatus = enrollments.map((en) => {
+      const start = new Date(en.class.startTime);
+      const end = en.class.endTime ? new Date(en.class.endTime as any) : null;
+
+      let status: "UPCOMING" | "ONGOING" | "ENDED";
+      if (start > now) status = "UPCOMING";
+      else if (end && end < now) status = "ENDED";
+      else status = "ONGOING";
+
+      return {
+        // โครงสร้างข้อมูลเดิมของคุณ
+        ...formatEnrolledClass(en),
+
+        // ฟิลด์สถานะที่เพิ่มให้
+        hasStarted: now >= start,                  // true เมื่อเลยเวลาเริ่มแล้ว
+        status,                                    // UPCOMING | ONGOING | ENDED
+        startsAt: start,                           // เผื่อ frontend ใช้ต่อ
+        endsAt: end,                               // เผื่อ frontend ใช้ต่อ
+        // optionals เผื่ออยากโชว์เวลานับถอยหลัง
+        msUntilStart: Math.max(0, start.getTime() - now.getTime()),
+        msUntilEnd: end ? Math.max(0, end.getTime() - now.getTime()) : null,
+      };
+    });
+
+    return res.json({
+      user,
+      enrollments: withStatus,
+    });
+  } catch (error) {
+    console.error("Failed to fetch user classes", error);
+    return res.status(500).json({ message: "Failed to fetch user classes." });
+  }
+};
+
+
+export const deleteUserClassEnrollment = async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  const classId = Number(req.params.classId);
+
+  if (Number.isNaN(userId) || Number.isNaN(classId)) {
+    return res.status(400).json({ message: "User id and class id must be valid numbers." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    await prisma.classEnrollment.delete({
+      where: {
+        classId_userId: {
+          classId,
+          userId,
+        },
+      },
+    });
+
+    return res.json({ message: "Enrollment removed successfully." });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({ message: "Enrollment not found." });
+    }
+
+    console.error("Failed to delete class enrollment", error);
+    return res.status(500).json({ message: "Failed to delete class enrollment." });
+  }
+};
+
+export const updateUserRole = async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  const { role, adminId } = req.body as { role?: Role | string; adminId?: number };
+
+  if (Number.isNaN(userId)) {
+    return res.status(400).json({ message: "User id must be a valid number." });
+  }
+
+  if (!role) {
+    return res.status(400).json({ message: "role is required." });
+  }
+
+  if (adminId === undefined || adminId === null || Number.isNaN(Number(adminId))) {
+    return res.status(400).json({ message: "adminId is required." });
+  }
+
+  if (!isValidRole(role)) {
+    return res.status(400).json({ message: "Invalid role value." });
+  }
+
+  try {
+    const [admin, targetUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: Number(adminId) } }),
+      prisma.user.findUnique({ where: { id: userId } }),
+    ]);
+
+    if (!admin || admin.role !== Role.ADMIN) {
+      return res.status(403).json({ message: "Only admins can update user roles." });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        role,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        username: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.json(updatedUser);
+  } catch (error) {
+    console.error("Failed to update user role", error);
+    return res.status(500).json({ message: "Failed to update user role." });
   }
 };
 

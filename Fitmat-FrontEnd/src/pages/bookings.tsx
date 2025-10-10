@@ -1,237 +1,329 @@
-import React, { useState, useEffect } from 'react';
-import { Layout } from '../../components/Layout';
-import { BookingCard } from '../../components/booking';
-import { Button } from '../../components/common';
+import React, { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+import { Layout } from "../../components/Layout";
+import { BookingCard, EnrollmentDisplay } from "../../components/booking";
+import { Button } from "../../components/common";
 
-interface Booking {
-  id: number;
-  date: string;
-  time: string;
-  duration: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  notes?: string;
-  trainer: {
+type EnrolledClassResponse = {
+  enrollmentId: number;
+  enrolledAt: string;
+  class: {
+    id: number;
+    title: string;
+    description: string | null;
+    startTime: string;
+    endTime: string | null;
+    capacity: number | null;
+    requiredRole: string | null;
+    enrollmentCount: number;
+    availableSpots: number | null;
+    trainer: { id: number; email: string; role: string; profileImage?: string | null } | null;
+    createdBy: { id: number; email: string; role: string } | null;
+    category: { id: number; name: string | null } | null;
+  };
+  hasStarted: boolean;
+  status: "UPCOMING" | "ONGOING" | "ENDED";
+  startsAt: string;
+  endsAt: string | null;
+  msUntilStart: number;
+  msUntilEnd: number | null;
+};
+
+type UserEnrollmentResponse = {
+  user: {
     id: number;
     email: string;
     role: string;
   };
-  createdAt: string;
-}
+  enrollments: EnrolledClassResponse[];
+};
+
+type FilterOption = "all" | "UPCOMING" | "ONGOING" | "ENDED";
+
+type TokenPayload = {
+  id?: number;
+  email?: string;
+  role?: string;
+  exp?: number;
+};
+
+const parseJwt = (token: string): TokenPayload | null => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(payload);
+  } catch (_error) {
+    return null;
+  }
+};
+
+const statusLabels: Record<Exclude<FilterOption, "all">, string> = {
+  UPCOMING: "Upcoming",
+  ONGOING: "Ongoing",
+  ENDED: "Ended",
+};
+
+const transformEnrollment = (enrollment: EnrolledClassResponse): EnrollmentDisplay => ({
+  enrollmentId: enrollment.enrollmentId,
+  status: enrollment.status,
+  startsAt: enrollment.startsAt,
+  endsAt: enrollment.endsAt,
+  classTitle: enrollment.class.title,
+  trainer: {
+    id: enrollment.class.trainer?.id ?? 0,
+    email: enrollment.class.trainer?.email ?? "-",
+    role: enrollment.class.trainer?.role ?? "-",
+    profileImage: enrollment.class.trainer?.profileImage ?? null,
+  },
+});
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const router = useRouter();
+  const [userId, setUserId] = useState<number | null>(null);
+  const [bookings, setBookings] = useState<EnrollmentDisplay[]>([]);
+  const [rawEnrollments, setRawEnrollments] = useState<EnrolledClassResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled' | 'completed'>('all');
+  const [filter, setFilter] = useState<FilterOption>("all");
 
-  // Mock data for demonstration
   useEffect(() => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const mockBookings: Booking[] = [
-        {
-          id: 1,
-          date: '2024-01-15',
-          time: '09:00',
-          duration: 60,
-          status: 'confirmed',
-          notes: 'ต้องการเน้นการออกกำลังกายส่วนบน',
-          trainer: {
-            id: 1,
-            email: 'trainer1@example.com',
-            role: 'Personal Trainer'
-          },
-          createdAt: '2024-01-10T10:00:00Z'
-        },
-        {
-          id: 2,
-          date: '2024-01-20',
-          time: '14:00',
-          duration: 90,
-          status: 'pending',
-          trainer: {
-            id: 2,
-            email: 'trainer2@example.com',
-            role: 'Fitness Coach'
-          },
-          createdAt: '2024-01-12T15:30:00Z'
-        },
-        {
-          id: 3,
-          date: '2024-01-08',
-          time: '16:00',
-          duration: 60,
-          status: 'completed',
-          trainer: {
-            id: 3,
-            email: 'trainer3@example.com',
-            role: 'Yoga Instructor'
-          },
-          createdAt: '2024-01-05T12:00:00Z'
-        }
-      ];
-      setBookings(mockBookings);
-      setLoading(false);
-    }, 1000);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setError("Please sign in to see your bookings.");
+      return;
+    }
+
+    const payload = parseJwt(token);
+    if (!payload?.id) {
+      setError("User info missing. Please sign in again.");
+      return;
+    }
+    setUserId(payload.id);
   }, []);
 
-  const filteredBookings = bookings.filter(booking => 
-    filter === 'all' || booking.status === filter
-  );
-
-  const handleCancel = async (bookingId: number) => {
-    if (confirm('คุณแน่ใจหรือไม่ที่จะยกเลิกการจองนี้?')) {
-      try {
-        // Here you would typically send a request to your backend
-        setBookings(prev => prev.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, status: 'cancelled' as const }
-            : booking
-        ));
-        alert('ยกเลิกการจองเรียบร้อยแล้ว');
-      } catch (error) {
-        console.error('Cancel booking failed:', error);
-        alert('การยกเลิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (!userId) {
+        return;
       }
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`http://localhost:4000/api/users/${userId}/classes`);
+        if (!res.ok) {
+          throw new Error("Unable to load bookings.");
+        }
+        const data: UserEnrollmentResponse = await res.json();
+        setRawEnrollments(data.enrollments ?? []);
+        setBookings((data.enrollments ?? []).map(transformEnrollment));
+      } catch (err: any) {
+        setError(err.message || "Something went wrong while loading data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEnrollments();
+  }, [userId]);
+
+  const filteredBookings = useMemo(() => {
+    if (filter === "all") {
+      return bookings;
     }
-  };
+    return bookings.filter((booking) => booking.status === filter);
+  }, [bookings, filter]);
 
-  const handleViewDetails = (bookingId: number) => {
-    // Here you could open a modal or navigate to a details page
-    console.log('View details for booking:', bookingId);
-  };
+  const statusCounts = useMemo(() => {
+    return bookings.reduce(
+      (acc, booking) => {
+        acc.all += 1;
+        acc[booking.status] = (acc[booking.status] || 0) + 1;
+        return acc;
+      },
+      {
+        all: 0,
+        UPCOMING: 0,
+        ONGOING: 0,
+        ENDED: 0,
+      } as Record<"all" | Exclude<FilterOption, "all">, number>
+    );
+  }, [bookings]);
 
-  const getFilterButtonClass = (filterType: string) => {
+  const getFilterButtonClass = (filterType: FilterOption) => {
     const baseClass = "px-4 py-2 rounded-lg font-semibold transition-all duration-200";
     const isActive = filter === filterType;
-    
+
     if (isActive) {
       return `${baseClass} bg-red-500 text-white shadow-lg`;
     }
-    
+
     return `${baseClass} bg-gray-100 text-gray-700 hover:bg-gray-200`;
   };
 
-  const getStatusCounts = () => {
-    return {
-      all: bookings.length,
-      pending: bookings.filter(b => b.status === 'pending').length,
-      confirmed: bookings.filter(b => b.status === 'confirmed').length,
-      cancelled: bookings.filter(b => b.status === 'cancelled').length,
-      completed: bookings.filter(b => b.status === 'completed').length,
-    };
+  const handleCancel = async (enrollmentId: number) => {
+    if (!userId) return;
+
+    const enrollment = rawEnrollments.find((item) => item.enrollmentId === enrollmentId);
+    if (!enrollment) {
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Cancel this booking?",
+      text: "Are you sure you want to cancel this class booking?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Back",
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://localhost:4000/api/users/${userId}/classes/${enrollment.class.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.message || "Unable to cancel booking.");
+      }
+
+      setRawEnrollments((prev) => prev.filter((item) => item.enrollmentId !== enrollmentId));
+      setBookings((prev) => prev.filter((item) => item.enrollmentId !== enrollmentId));
+
+      await Swal.fire({
+        icon: "success",
+        title: "Booking cancelled",
+        text: "Booking has been cancelled",
+        confirmButtonColor: "#ef4444",
+      });
+    } catch (error: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "Cancel failed",
+        text: error?.message || "Something went wrong. Please try again.",
+        confirmButtonColor: "#ef4444",
+      });
+    }
   };
 
-  const statusCounts = getStatusCounts();
+  const emptyTitle =
+    filter === "all"
+      ? "No bookings found"
+      : `No classes found for "${statusLabels[filter as Exclude<FilterOption, "all">]}"`;
+  const emptyDescription =
+    filter === "all"
+      ? "Start exploring our classes and enrol today."
+      : "Try browsing other available classes.";
+
+  const handleViewDetails = (enrollmentId: number) => {
+    const enrollment = rawEnrollments.find((item) => item.enrollmentId === enrollmentId);
+    if (!enrollment) return;
+    router.push(`/fitmateclass/${enrollment.class.id}`);
+  };
 
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-6xl mx-auto px-4">
-          {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              การจองของฉัน
-            </h1>
-            <p className="text-gray-600 text-lg">
-              จัดการการจองและติดตามสถานะ
-            </p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Your Class Bookings</h1>
+            <p className="text-gray-600 text-lg">Keep track of every class you have enrolled in, spot what is coming up, and review what has been completed.</p>
           </div>
 
-          {/* Filter Tabs */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
             <div className="flex flex-wrap gap-3 justify-center">
               <button
-                onClick={() => setFilter('all')}
-                className={getFilterButtonClass('all')}
+                onClick={() => setFilter("all")}
+                className={getFilterButtonClass("all")}
               >
-                ทั้งหมด ({statusCounts.all})
+                All ({statusCounts.all})
               </button>
-              <button
-                onClick={() => setFilter('pending')}
-                className={getFilterButtonClass('pending')}
-              >
-                รอยืนยัน ({statusCounts.pending})
-              </button>
-              <button
-                onClick={() => setFilter('confirmed')}
-                className={getFilterButtonClass('confirmed')}
-              >
-                ยืนยันแล้ว ({statusCounts.confirmed})
-              </button>
-              <button
-                onClick={() => setFilter('completed')}
-                className={getFilterButtonClass('completed')}
-              >
-                เสร็จสิ้น ({statusCounts.completed})
-              </button>
-              <button
-                onClick={() => setFilter('cancelled')}
-                className={getFilterButtonClass('cancelled')}
-              >
-                ยกเลิก ({statusCounts.cancelled})
-              </button>
+              {Object.entries(statusLabels).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key as FilterOption)}
+                  className={getFilterButtonClass(key as FilterOption)}
+                >
+                  {label} ({statusCounts[key as Exclude<FilterOption, "all">]})
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Bookings List */}
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
-              <p className="text-gray-500 mt-4">กำลังโหลด...</p>
+              <p className="text-gray-500 mt-4">Loading data...</p>
             </div>
           ) : error ? (
             <div className="text-center py-12">
               <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md mx-auto">
-                ❌ {error}
+                {error}
               </div>
             </div>
           ) : filteredBookings.length === 0 ? (
             <div className="text-center py-12">
               <div className="bg-gray-50 border border-gray-200 text-gray-700 px-6 py-8 rounded-lg max-w-md mx-auto">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-16 h-16 text-gray-400 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
-                <h3 className="text-lg font-semibold mb-2">
-                  {filter === 'all' ? 'ยังไม่มีการจอง' : `ไม่มีการจองในสถานะ ${filter}`}
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  {filter === 'all' 
-                    ? 'เริ่มต้นการจองเทรนเนอร์ของคุณ' 
-                    : 'ลองดูสถานะอื่นๆ'
-                  }
-                </p>
-                {filter === 'all' && (
-                  <Button href="/trainer" variant="primary">
-                    จองเทรนเนอร์
+                <h3 className="text-lg font-semibold mb-2">{emptyTitle}</h3>
+                <p className="text-gray-500 mb-4">{emptyDescription}</p>
+                {filter === "all" && (
+                  <Button href="/fitmateclass" variant="primary">
+                    Browse classes
                   </Button>
                 )}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredBookings.map((booking) => (
+              {filteredBookings.map((enrollment) => (
                 <BookingCard
-                  key={booking.id}
-                  booking={booking}
+                  key={enrollment.enrollmentId}
+                  enrollment={enrollment}
+                  canCancel={enrollment.status === "UPCOMING"}
                   onCancel={handleCancel}
                   onViewDetails={handleViewDetails}
-                  showActions={true}
                 />
               ))}
             </div>
           )}
 
-          {/* Quick Actions */}
           {bookings.length > 0 && (
             <div className="mt-12 text-center">
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  ต้องการจองเพิ่มเติม?
+                  Ready to book another class?
                 </h3>
-                <Button href="/trainer" variant="primary" size="lg">
-                  จองเทรนเนอร์คนใหม่
+                <Button href="/fitmateclass" variant="primary" size="lg">
+                  Find more classes
                 </Button>
               </div>
             </div>
@@ -241,3 +333,6 @@ export default function BookingsPage() {
     </Layout>
   );
 }
+
+
+

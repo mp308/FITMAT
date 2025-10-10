@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import { Layout } from "../../../components/Layout";
 import { TrainerCard, TrainerSearch } from "../../../components/trainer";
 
@@ -10,6 +11,7 @@ type Trainer = {
   updatedAt: string;
   totalReviews: number;
   averageRating: number | null;
+  profileImage?: string | null;
 };
 
 export default function Trainer() {
@@ -18,6 +20,12 @@ export default function Trainer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const normalizeProfileImage = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
 
   useEffect(() => {
     const fetchTrainers = async () => {
@@ -28,9 +36,15 @@ export default function Trainer() {
         if (!res.ok) {
           throw new Error("Failed to fetch trainers");
         }
-        const data = await res.json();
-        setTrainers(data);
-        setFilteredTrainers(data);
+        const data: Trainer[] = await res.json();
+        const normalized = data.map((trainer) => ({
+          ...trainer,
+          profileImage: normalizeProfileImage(trainer.profileImage),
+        }));
+        console.log("asdas",normalized);
+        
+        setTrainers(normalized);
+        setFilteredTrainers(normalized);
       } catch (err: any) {
         setError(err.message || "Something went wrong");
       } finally {
@@ -82,14 +96,24 @@ export default function Trainer() {
     setFilteredTrainers(filtered);
   };
 
-  const handleBook = async (trainerId: number, bookingData: any) => {
+    const handleBook = async (trainerId: number, bookingData: any) => {
     try {
       // Here you would typically send the booking data to your backend
       console.log('Booking trainer:', trainerId, bookingData);
-      alert('จองสำเร็จ! ระบบจะติดต่อกลับในภายหลัง');
+      await Swal.fire({
+        icon: 'success',
+        title: 'จองสำเร็จ',
+        text: 'ระบบจะติดต่อกลับในภายหลัง',
+        confirmButtonColor: '#ef4444',
+      });
     } catch (error) {
       console.error('Booking failed:', error);
-      alert('การจองไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      await Swal.fire({
+        icon: 'error',
+        title: 'จองไม่สำเร็จ',
+        text: 'กรุณาลองใหม่อีกครั้ง',
+        confirmButtonColor: '#ef4444',
+      });
     }
   };
 

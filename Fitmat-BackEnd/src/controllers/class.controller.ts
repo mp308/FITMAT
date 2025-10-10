@@ -156,6 +156,34 @@ export const listClasses = async (_req: Request, res: Response) => {
   }
 };
 
+export const listUpcomingClasses = async (req: Request, res: Response) => {
+  try {
+    // ใช้เวลาปัจจุบัน (UTC) เปรียบเทียบกับ startTime ที่เก็บใน DB
+    const now = new Date();
+
+    const classes = await prisma.class.findMany({
+      where: {
+        startTime: { gt: now },
+        // ถ้ามีสถานะยกเลิก/ปิดรับ สามารถกรองเพิ่มได้ เช่น:
+        // status: "ACTIVE",
+      },
+      orderBy: { startTime: "asc" },
+      include: {
+        createdBy: { select: { id: true, email: true, role: true } },
+        trainer: { select: { id: true, email: true, role: true } },
+        category: true,
+        _count: { select: { enrollments: true } },
+      },
+    });
+
+    const formatted = classes.map(formatClass);
+    return res.json(formatted);
+  } catch (error) {
+    console.error("Failed to fetch upcoming classes", error);
+    return res.status(500).json({ message: "Failed to fetch upcoming classes." });
+  }
+};
+
 export const enrollInClass = async (req: Request, res: Response) => {
   const { classId } = req.params;
   const { userId } = req.body as { userId?: number };

@@ -152,7 +152,15 @@ export const getTrainerReviews = async (req: Request, res: Response) => {
   }
 
   try {
-    const trainer = await prisma.user.findUnique({ where: { id: trainerId } });
+    const trainer = await prisma.user.findUnique({
+      where: { id: trainerId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        profileImage: true,
+      },
+    });
 
     if (!trainer || trainer.role !== Role.TRAINER) {
       return res
@@ -183,11 +191,7 @@ export const getTrainerReviews = async (req: Request, res: Response) => {
         : null;
 
     return res.json({
-      trainer: {
-        id: trainer.id,
-        email: trainer.email,
-        role: trainer.role,
-      },
+      trainer,
       totalReviews: reviews.length,
       averageRating,
       reviews,

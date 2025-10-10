@@ -129,109 +129,111 @@ export default function Contact() {
             </div>
 
             {/* ฟอร์มติดต่อ */}
-<div className="bg-white rounded-lg shadow-lg p-8">
-      <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
-        เราช่วยคุณได้อย่างไร?
-      </h3>
-      <p className="text-gray-600 text-center mb-8">
-        กรุณากรอกข้อมูลการติดต่อ เราจะติดต่อกลับภายใน 24 ชั่วโมง
-      </p>
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
+                เราช่วยคุณได้อย่างไร?
+              </h3>
+              <p className="text-gray-600 text-center mb-8">
+                กรุณากรอกข้อมูลการติดต่อ เราจะติดต่อกลับภายใน 24 ชั่วโมง
+              </p>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              ชื่อของคุณ
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Please enter your full name"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              อีเมล
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter your email address"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-            />
-          </div>
-        </div>
+              <form className="space-y-6" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ชื่อของคุณ
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      placeholder="Please enter your full name"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      อีเมล
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="Enter your email address"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                    />
+                  </div>
+                </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            เบอร์โทรศัพท์
-          </label>
-          <input
-            type="tel"
-            name="phoneNumber"
-            value={form.phoneNumber}
-            onChange={handleChange}
-            placeholder="Enter your phone number"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-          />
-        </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    เบอร์โทรศัพท์
+                  </label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={form.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="Enter your phone number"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                  />
+                </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            หัวข้อที่อยากปรึกษา
-          </label>
-          <input
-            type="text"
-            name="subject"
-            value={form.subject}
-            onChange={handleChange}
-            placeholder="Add subject here"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-          />
-        </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    หัวข้อที่อยากปรึกษา
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={form.subject}
+                    onChange={handleChange}
+                    placeholder="Add subject here"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                  />
+                </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ข้อความของคุณ
-          </label>
-          <textarea
-            name="message"
-            value={form.message}
-            onChange={handleChange}
-            rows={4}
-            placeholder="Describe your message here"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
-          ></textarea>
-        </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ข้อความของคุณ
+                  </label>
+                  <textarea
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Describe your message here"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
+                  ></textarea>
+                </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 active:bg-red-700 active:scale-95 transition-all duration-200 cursor-pointer"
-        >
-          {loading ? "กำลังส่ง..." : "Send Message"}
-        </button>
-      </form>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 active:bg-red-700 active:scale-95 transition-all duration-200 cursor-pointer"
+                >
+                  {loading ? "กำลังส่ง..." : "Send Message"}
+                </button>
+              </form>
 
-      {status === "success" && (
-        <p className="mt-4 text-green-600 text-sm text-center">
-          ✅ ส่งข้อความเรียบร้อยแล้ว!
-        </p>
-      )}
-      {status && status !== "success" && (
-        <p className="mt-4 text-red-600 text-sm text-center">❌ {status}</p>
-      )}
-    </div>
+              {status === "success" && (
+                <p className="mt-4 text-green-600 text-sm text-center">
+                  ✅ ส่งข้อความเรียบร้อยแล้ว!
+                </p>
+              )}
+              {status && status !== "success" && (
+                <p className="mt-4 text-red-600 text-sm text-center">
+                  ❌ {status}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </section>

@@ -12,6 +12,7 @@ export const listTrainers = async (_req: Request, res: Response) => {
         role: true,
         createdAt: true,
         updatedAt: true,
+        profileImage: true,
         receivedReviews: {
           select: {
             rating: true,
@@ -39,6 +40,7 @@ export const listTrainers = async (_req: Request, res: Response) => {
         role: trainer.role,
         createdAt: trainer.createdAt,
         updatedAt: trainer.updatedAt,
+        profileImage: trainer.profileImage,
         totalReviews,
         averageRating,
       };
@@ -67,6 +69,7 @@ export const getTrainerById = async (req: Request, res: Response) => {
         role: true,
         createdAt: true,
         updatedAt: true,
+        profileImage: true,
         receivedReviews: {
           select: {
             rating: true,
@@ -96,6 +99,7 @@ export const getTrainerById = async (req: Request, res: Response) => {
       role: trainer.role,
       createdAt: trainer.createdAt,
       updatedAt: trainer.updatedAt,
+      profileImage: trainer.profileImage,
       totalReviews,
       averageRating,
     });
