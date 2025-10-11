@@ -1,31 +1,73 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
+type TokenPayload = {
+  id?: number;
+  role?: string;
+  exp?: number; // seconds since epoch
+  email?: string;
+};
 
 export default function PaymentUpload() {
   const [form, setForm] = useState({
-    userId: "",
     amount: "",
     note: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [user, setUser] = useState<TokenPayload | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  function parseJwt(token: string): TokenPayload | null {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      return JSON.parse(jsonPayload) as TokenPayload;
+    } catch {
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    // ทำงานฝั่ง client เท่านั้น
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) return;
+
+    const payload = parseJwt(storedToken);
+    const notExpired = payload?.exp ? payload.exp * 1000 > Date.now() : true;
+
+    if (payload && notExpired) {
+      setUser(payload);
+      setToken(storedToken);
+    }
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-    }
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user?.id) {
+      setStatus("กรุณาเข้าสู่ระบบก่อนอัปโหลดหลักฐานการชำระเงิน");
+      return;
+    }
     if (!file) {
       setStatus("กรุณาเลือกไฟล์สลิปการชำระเงิน");
       return;
@@ -36,26 +78,36 @@ export default function PaymentUpload() {
 
     try {
       const formData = new FormData();
-      formData.append("userId", form.userId);
+      // ส่ง userId จาก token โดยตรง
+      formData.append("userId", String(user.id));
       formData.append("amount", form.amount);
       formData.append("note", form.note);
-      formData.append("paymentImage", file); 
+      formData.append("paymentImage", file);
 
       const res = await fetch("http://localhost:4000/api/payments", {
         method: "POST",
         body: formData,
+        // ถ้า API ฝั่งหลังบ้านต้องใช้ Bearer token ให้ปลดคอมเมนต์ headers ด้านล่าง
+        // headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Upload failed");
+        // พยายามอ่านข้อความ error ที่ฝั่ง API ส่งมา
+        let message = "Upload failed";
+        try {
+          const data = await res.json();
+          message = data?.message || message;
+        } catch {
+          // ignore
+        }
+        throw new Error(message);
       }
 
       setStatus("success");
-      setForm({ userId: "", amount: "", note: "" });
+      setForm({ amount: "", note: "" });
       setFile(null);
     } catch (err: any) {
-      setStatus(err.message || "Something went wrong");
+      setStatus(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -70,17 +122,6 @@ export default function PaymentUpload() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block mb-2 text-sm font-medium">User ID</label>
-            <input
-              type="number"
-              name="userId"
-              value={form.userId}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-          </div>
-          <div>
             <label className="block mb-2 text-sm font-medium">จำนวนเงิน</label>
             <input
               type="number"
@@ -91,6 +132,7 @@ export default function PaymentUpload() {
               className="w-full px-4 py-2 border rounded-lg"
             />
           </div>
+
           <div>
             <label className="block mb-2 text-sm font-medium">หมายเหตุ</label>
             <textarea
@@ -99,8 +141,9 @@ export default function PaymentUpload() {
               onChange={handleChange}
               rows={3}
               className="w-full px-4 py-2 border rounded-lg resize-none"
-            ></textarea>
+            />
           </div>
+
           <div>
             <label className="block mb-2 text-sm font-medium">อัปโหลดสลิป</label>
             <input
